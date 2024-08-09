@@ -7,6 +7,8 @@ from auto_meshgrid import DataProcessing as dp
 import skrf as rf
 
 fig, ax = plt.subplots()
+
+# 这是你需要修改的第一个地方，也就是你要拟合的文件地址
 data = pd.read_csv(r'C:\Users\海鸥\OneDrive\桌面\20240727\2.7k\0.csv')
 x_re = np.array(data.loc[:, "X"])
 y_im = np.array(data.loc[:, "Y"])
@@ -17,9 +19,9 @@ x_yi = x_re + 1j * y_im
 # 使用rf，根据vna设置来建立一个网络
 freq_rf = rf.Frequency(float(freq[0]), float(freq[-1]), len(freq), 'hz')
 network = rf.Network(frequency=freq_rf, s=x_yi)
-# 展示vna测量的史密斯原图
-# network.plot_s_smith(ax=ax, show_legend=False)
 
+# 你需要修改的第二个地方是这里
+# 修改成谐振器的共振峰范围，以及共振模式，S21则是transmission，S11则是reflection
 Q = rf.Qfactor(network['2.123-2.128GHz'], res_type='transmission')
 res = Q.fit()
 Q0 = Q.Q_unloaded(A=1.0)
