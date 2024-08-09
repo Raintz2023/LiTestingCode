@@ -394,6 +394,3 @@ if __name__ == '__main__':
     init = measure.fmr_init
     measure.fmr_measure(start_field=0, stop_field=1000, field_step=100, data_fetch_time=0.5, source_frequency=5,
                         source_power=-5, vna=init[0], sr830=init[1])
-
-
-
