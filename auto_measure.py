@@ -292,8 +292,8 @@ class AutoMeasure:
         s21 = np.array([])
 
         for i in range(0, len(raw_data), 2):
-            x = np.append(x, raw_data[k])
-            y = np.append(y, raw_data[k + 1])
+            x = np.append(x, raw_data[i])
+            y = np.append(y, raw_data[i + 1])
             log_magnitude = 20 * np.log10(np.sqrt(raw_data[i] ** 2 + raw_data[i + 1] ** 2))
             s21 = np.append(s21, log_magnitude)
 

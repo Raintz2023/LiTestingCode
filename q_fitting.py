@@ -9,7 +9,7 @@ import skrf as rf
 fig, ax = plt.subplots()
 
 # 这是你需要修改的第一个地方，也就是你要拟合的文件地址
-data = pd.read_csv(r'C:\Users\海鸥\OneDrive\桌面\20240727\2.7k\0.csv')
+data = pd.read_csv(r"C:\\Users\\海鸥\\OneDrive\\桌面\\20240727\\2.7k\\0.csv")
 x_re = np.array(data.loc[:, "X"])
 y_im = np.array(data.loc[:, "Y"])
 freq = np.array(data.loc[:, "Frequency (Hz)"])
