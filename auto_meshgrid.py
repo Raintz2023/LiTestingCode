@@ -35,7 +35,7 @@ class DataProcessing:
             # 给出具体文件地址，并且选中读取
             file_path = os.path.join(self.path, csv_file)
             df = pd.read_csv(file_path)
-            df = df.loc[df.iloc[:, 1] > 2e9, :]
+            # df = df.loc[df.iloc[:, 1] > 2e9, :] # 读取特定范围的频率数据
             # 提取特定列竖向拼接成三个Dataframe网格
             field_meshgrid = pd.concat([field_meshgrid, df.iloc[:, 0]], axis=1)
             freq_meshgrid = pd.concat([freq_meshgrid, df.iloc[:, 1]], axis=1)
@@ -58,7 +58,7 @@ class DataProcessing:
     def bathymetric(ax_, *args):
         field_meshgrid, freq_meshgrid, s21_meshgrid, s21_meshgrid_normalized = args
         s21_meshgrid = s21_meshgrid.sub(s21_meshgrid_normalized, axis='index')  # 每列都减去归一化s21列
-        # s21_meshgrid[s21_meshgrid > 0.001] = 0
+        # s21_meshgrid[s21_meshgrid > 0.001] = 0 # 除去无用的信号
         ax_.contourf(field_meshgrid, freq_meshgrid, s21_meshgrid, 100, cmap='viridis')
 
 
