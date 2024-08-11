@@ -23,7 +23,7 @@ class PpmsController:
         This class is used to establish a connection with PPMS.
         Before running this module, please ensure that the server side connecting to the PPMS is opened.
     """
-    # 不同于__init__，这个会在该模块运行时直接建立连接，而不需要实例化。
+    # 不同于__init__，这个会在该程序运行时直接建立连接，而不需要实例化。
     ppms = mpv.Client("222.195.78.246", 5000)
     ppms.open()
 
