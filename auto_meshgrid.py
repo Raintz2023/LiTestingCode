@@ -4,8 +4,6 @@ import os
 import pandas as pd
 import time
 import math
-from lmfit import Model
-from matplotlib.widgets import Cursor
 
 
 class DataProcessing:
@@ -64,7 +62,7 @@ class DataProcessing:
 
 if __name__ == '__main__':
     fig, ax = plt.subplots()
-    data = DataProcessing(path=r"C:\Users\海鸥\OneDrive\桌面\20240727\2.6k")    # 需要修改的第一个地方
+    data = DataProcessing(path=r"C:\\Users\\海鸥\\OneDrive\\桌面\\documents\\20240727\\2.6k")    # 需要修改的第一个地方
     # normalized = 0代表不归一化；normalized>0代表减去第几个数据；normalized=-1代表一种特殊去背噪的方法
     meshgrid = data.meshgrid(normalized=0)
     # 绘制出三维等深图
