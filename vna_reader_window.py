@@ -128,7 +128,6 @@ class VnaReadDrawThread(QThread):
         def onclick(event):
             x_click = (event.xdata)/1e9
             y_click = event.ydata
-            print("Ok")
             self.annot.xy = (x_click, y_click)
             text = "({:.4g}, {:.4g})".format(x_click, y_click)
             self.annot.set_text(text)
@@ -252,6 +251,7 @@ class VnaReadDrawThread(QThread):
 
     def stop_reading(self):
         self._is_running = False
+        # 点击动作显示标签的连接，在Thread结束的时候解除，放置再次进入建立多次连接 ***
         if self.connection_id is not None:
             self.canvas.mpl_disconnect(self.connection_id)
             self.connection_id = None

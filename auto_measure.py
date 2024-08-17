@@ -134,7 +134,7 @@ class AutoMeasure:
             # 获取下一组数据
             raw_data = vna.query_ascii_values(":CALCulate:DATA? SDATA")
 
-    def fmr_init(self):
+    def fmr_init(self) -> "通过rm连接到的vna和sr830":
         """
         :return: 传输给fmr_measure的init参数
         """
@@ -172,7 +172,8 @@ class AutoMeasure:
         return vna, sr830
 
     def fmr_measure(self, start_field: int, stop_field: int, field_step: int,
-                    data_fetch_time: float, source_frequency: float, source_power: int, vna, sr830):
+                    data_fetch_time: float, source_frequency: float, source_power: int,
+                    vna: "fmr_init的return中的vna", sr830: "fmr_init返回中的sr830"):
 
         """
         :param start_field: 测量起始磁场
@@ -319,7 +320,7 @@ class AutoMeasure:
 
         print(f"{name_field} has been saved to: {save_field}")
 
-    def vna_status(self) -> NamedTuple:
+    def vna_status(self) -> "一个包含vna所有设置的NamedTuple":
         """
         和VNA建立连接，并且返回VNA自身及其设置
         """
