@@ -194,7 +194,7 @@ class StartMeasureThread(QThread):
                 self.ppms.wait_for(delay_sec=10, timeout_sec=0, bitmask=self.ppms.subsystem.temperature)
                 if self._is_not_running:
                     break
-
+                        
         print('\n')
         print(Fore.BLUE + f"All testing has concluded".center(110, '^'))
 
