@@ -1,7 +1,6 @@
 import os.path
 import time
 import datetime
-import random
 import sys
 import pyvisa as visa
 import numpy as np
@@ -101,7 +100,7 @@ class VnaSetupThread(QThread):
             VnaController.vna.write(":SENSe1:AVERage:STATe ON")
             VnaController.vna.write(f":SENSe1:AVERage:COUNt {int(self.average_counts)}")
 
-        time.sleep(3)
+        time.sleep(4)
         # 发送设置结束信号数字0结束归一化操作，同时激活（重置）实时绘图函数
         self.finished_signal.emit(0, self.vna_format)
 
@@ -125,22 +124,23 @@ class VnaReadDrawThread(QThread):
 
         # 创建一个标记，先不显示，当点击后显示，用来标记数据
         self.connection_id = None
-        def onclick(event):
-            x_click = (event.xdata)/1e9
-            y_click = event.ydata
-            self.annot.xy = (x_click, y_click)
-            text = "({:.4g}, {:.4g})".format(x_click, y_click)
-            self.annot.set_text(text)
-            self.annot.set_visible(True)
+    
+    def onclick(self, event):
+        x_click = event.xdata
+        y_click = event.ydata
+        self.annot.xy = (x_click, y_click)
+        text = f"({(x_click/1e9):.4g}, {y_click:.4g})"
+        self.annot.set_text(text)
+        self.annot.set_visible(True)
+        try:
             self.canvas.draw()
-
-        if self.connection_id is None:
-            self.connection_id = self.canvas.mpl_connect('button_press_event', onclick)  # 点击动作显示标记,循环体外和点击连接
+        except AttributeError:
+            pass
 
     def run(self):
         # 持续读取数据并且绘图
         while self._is_running:
-            time.sleep(1)
+            time.sleep(0.2)
             self.vna_read_draw()
 
     def vna_read_draw(self):
@@ -163,9 +163,15 @@ class VnaReadDrawThread(QThread):
         s_parameter = VnaController.vna.query(":CALC:PAR:CAT?").strip().split(',')[1][0:3]
 
         # 获取曲线的测量原始数据
-        raw_data = np.array(VnaController.vna.query_ascii_values(":CALC:DATA? SDATA"))
+        try:
+            raw_data = np.array(VnaController.vna.query_ascii_values(":CALC:DATA? SDATA"))
+        except visa.errors.VisaIOError:
+            self.stop_reading()  # 捕获错误，终止进程
+            return
+        
+        time.sleep((points[0]/2001) * 1.2)
 
-        freq = (np.linspace(start_freq[0], stop_freq[0], int(points[0])))
+        freq = np.linspace(start_freq[0], stop_freq[0], int(points[0]))
 
         if self.vna_format == "log":    # 对数幅值
             # 创建一个空向量用来存储x+yi数据
@@ -175,15 +181,8 @@ class VnaReadDrawThread(QThread):
                 x_re = np.append(x_re, raw_data[i])
                 y_im = np.append(y_im, raw_data[i + 1])
 
-            # 将标记和ax建立连接
-            self.ax.clear()
-            self.annot = self.ax.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
-                                          bbox=dict(boxstyle='round4, pad=0.3', fc='linen', ec='k', lw=1),
-                                          arrowprops=dict(arrowstyle='-|>'), fontsize=20, va='center', ha='center')
-            self.annot.set_visible(False)
-
-            freq_rf = rf.Frequency(float(freq[0]), float(freq[-1]), len(freq), 'hz')
             x_yi = x_re + 1j * y_im
+            freq_rf = rf.Frequency(float(freq[0]), float(freq[-1]), len(freq), 'hz')
             network = rf.Network(frequency=freq_rf, s=x_yi)
             s21 = network.s_db[:, 0, 0] # 获取S21的幅值，传递出去保存
 
@@ -191,21 +190,33 @@ class VnaReadDrawThread(QThread):
             if self.normalize.any():
                 s21 = s21 - self.normalize
 
-            self.ax.plot(freq, s21, color='red')    # 绘出S21幅值图
-
             if self.q_fitting_signal == 1 and self.w_res != 0:  # Q值拟合信号和谐振器频率同时给出才进入拟合模式
 
-                if s_parameter == "S21":
-                    q = rf.Qfactor(network[f'{self.w_res}GHz'], res_type='transmission')
+                if (self.w_res.split(',')[0]) == 't':
+                    q = rf.Qfactor(network[f"{self.w_res.split(',')[1]}GHz"], res_type='transmission')
                 else:
-                    q = rf.Qfactor(network[f'{self.w_res}GHz'], res_type='reflection')
-                res = q.fit()
-                q0 = q.Q_unloaded(A=1.0)
-                fitted_network = q.fitted_network(frequency=freq_rf)
-                fitted_network.plot_s_db(ax=self.ax, label='Fitted Model', lw=2, color='C0', ls='--')
-                print(f'Fitted Resonant Frequency: f_L = {q.f_L / 1e9} GHz')
-                print(f'Fitted Loaded Q-factor: Q_L = {q.Q_L}')
-                print(f'Fitted Unloaded Q-factor: Q_0 = {q0}')
+                    q = rf.Qfactor(network[f"{self.w_res.split(',')[1]}GHz"], res_type='reflection')
+                try:
+                    res = q.fit()
+                    q0 = q.Q_unloaded(A=1.0)    
+                    fitted_network = q.fitted_network(frequency=freq_rf)
+                    fitted_network.plot_s_db(ax=self.ax, label='Fitted Model', lw=2, color='C0', ls='--')
+                    print(f'Fitted Resonant Frequency: f_L = {q.f_L / 1e9} GHz')
+                    print(f'Fitted Loaded Q-factor: Q_L = {q.Q_L}')
+                    print(f'Fitted Unloaded Q-factor: Q_0 = {q0}')
+                except np.linalg.LinAlgError:
+                    print("Change the frequency of the resonator!")
+
+            self.ax.clear()
+            self.annot = self.ax.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
+                                          bbox=dict(boxstyle='round4, pad=0.3', fc='linen', ec='k', lw=1),
+                                          arrowprops=dict(arrowstyle='-|>'), fontsize=20, va='center', ha='center')
+            self.annot.set_visible(False)
+
+            self.ax.plot(freq, s21, color='red')    # 绘出S21幅值图
+
+            if self.connection_id is None:
+                self.connection_id = self.canvas.mpl_connect('button_press_event', self.onclick) 
 
             self.ax.set_title(f'{s_parameter}', fontsize='40')
             self.ax.set_xlabel('Frequency (GHz)', fontsize='30')
@@ -233,15 +244,20 @@ class VnaReadDrawThread(QThread):
             x_yi = x_re + 1j * y_im
 
             # 使用rf，根据vna设置来建立一个网络
-            freq_rf = rf.Frequency(int(start_freq[0]), int(stop_freq[0]), int(points[0]), 'hz')
-            network = rf.Network(frequency=freq_rf, s=x_yi)
+            network = rf.Network(frequency=freq, s=x_yi)
             # 展示vna测量的史密斯原图
             self.ax.clear()
             self.annot = self.ax.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
                                           bbox=dict(boxstyle='round4, pad=0.3', fc='linen', ec='k', lw=1),
                                           arrowprops=dict(arrowstyle='-|>'), fontsize=20, va='center', ha='center')
             self.annot.set_visible(False)
+
+            
             network.plot_s_smith(ax=self.ax, show_legend=False)
+
+            if self.connection_id is None:
+                self.connection_id = self.canvas.mpl_connect('button_press_event', self.onclick) 
+
             self.ax.set_title(f'{s_parameter} Smith Plot', fontsize='40')
 
             self.canvas.draw()
