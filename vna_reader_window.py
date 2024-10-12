@@ -167,6 +167,7 @@ class VnaReadDrawThread(QThread):
             return
         
         time.sleep((points[0]/2001) * 1.2)
+        
         freq = np.linspace(start_freq[0], stop_freq[0], int(points[0]))
 
         if self.vna_format == "log":    # 对数幅值
