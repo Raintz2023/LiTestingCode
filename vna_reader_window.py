@@ -5,16 +5,13 @@ import sys
 import pyvisa as visa
 import numpy as np
 import MultiPyVu as mpv
-import matplotlib.pyplot as plt
 import skrf as rf
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit,
-                             QPushButton, QSizePolicy, QCheckBox, QDesktopWidget)
-from auto_meshgrid import DataProcessing as dp
-from matplotlib.widgets import Cursor
+                             QPushButton, QCheckBox, QDesktopWidget)
 
 
 class VnaController:
@@ -186,17 +183,18 @@ class VnaReadDrawThread(QThread):
             network = rf.Network(frequency=freq_rf, s=x_yi)
             s21 = network.s_db[:, 0, 0] # 获取S21的幅值，传递出去保存
 
+            self.ax.clear()
             # 根据normalize的值来决定是否归一化
             if self.normalize.any():
                 s21 = s21 - self.normalize
-
+            
             if self.q_fitting_signal == 1 and self.w_res != 0:  # Q值拟合信号和谐振器频率同时给出才进入拟合模式
 
                 if (self.w_res.split(',')[0]) == 't':
                     q = rf.Qfactor(network[f"{self.w_res.split(',')[1]}GHz"], res_type='transmission')
                 else:
                     q = rf.Qfactor(network[f"{self.w_res.split(',')[1]}GHz"], res_type='reflection')
-                try:
+                try:       # ***使用else优化try
                     res = q.fit()
                     q0 = q.Q_unloaded(A=1.0)    
                     fitted_network = q.fitted_network(frequency=freq_rf)
@@ -207,7 +205,6 @@ class VnaReadDrawThread(QThread):
                 except np.linalg.LinAlgError:
                     print("Change the frequency of the resonator!")
 
-            self.ax.clear()
             self.annot = self.ax.annotate("", xy=(0, 0), xytext=(-40, 40), textcoords="offset points",
                                           bbox=dict(boxstyle='round4, pad=0.3', fc='linen', ec='k', lw=1),
                                           arrowprops=dict(arrowstyle='-|>'), fontsize=20, va='center', ha='center')
@@ -458,35 +455,35 @@ class MyWindow(QWidget):
         layout.addWidget(self.fitting_q_checkbox, 4, 6, 1, 1)
         layout.addWidget(self.input_fitting_q, 5, 6, 1, 1)
         layout.addWidget(self.btn_fitting_q, 6, 6, 1, 1)
-        layout.addWidget(label_vna, 1+addition, 0, 1, 2)
-        layout.addWidget(label_vna_s, 1+addition, 2, 1, 1)
+        layout.addWidget(label_vna, 1 + addition, 0, 1, 2)
+        layout.addWidget(label_vna_s, 1 + addition, 2, 1, 1)
         layout.addWidget(self.input_vna_s_parameter, 1 + addition, 3, 1, 1)
-        layout.addWidget(label_vna_start_freq, 2+addition, 0, 1, 1)
-        layout.addWidget(self.input_vna_startFreq, 2+addition, 1, 1, 1)
-        layout.addWidget(label_vna_stop_freq, 2+addition, 2, 1, 1)
-        layout.addWidget(self.input_vna_stopFreq, 2+addition, 3, 1, 1)
-        layout.addWidget(label_vna_power, 3+addition, 0, 1, 1)
-        layout.addWidget(self.input_vna_power, 3+addition, 1, 1, 1)
-        layout.addWidget(label_vna_bandwidth, 3+addition, 2, 1, 1)
-        layout.addWidget(self.input_vna_bandwidth, 3+addition, 3, 1, 1)
-        layout.addWidget(label_vna_points, 4+addition, 0, 1, 1)
-        layout.addWidget(self.input_vna_points, 4+addition, 1, 1, 1)
-        layout.addWidget(label_vna_average_counts, 4+addition, 2, 1, 1)
-        layout.addWidget(self.input_vna_averageCounts, 4+addition, 3, 1, 1)
+        layout.addWidget(label_vna_start_freq, 2 + addition, 0, 1, 1)
+        layout.addWidget(self.input_vna_startFreq, 2 + addition, 1, 1, 1)
+        layout.addWidget(label_vna_stop_freq, 2 + addition, 2, 1, 1)
+        layout.addWidget(self.input_vna_stopFreq, 2 + addition, 3, 1, 1)
+        layout.addWidget(label_vna_power, 3 + addition, 0, 1, 1)
+        layout.addWidget(self.input_vna_power, 3 + addition, 1, 1, 1)
+        layout.addWidget(label_vna_bandwidth, 3 + addition, 2, 1, 1)
+        layout.addWidget(self.input_vna_bandwidth, 3 + addition, 3, 1, 1)
+        layout.addWidget(label_vna_points, 4 + addition, 0, 1, 1)
+        layout.addWidget(self.input_vna_points, 4 + addition, 1, 1, 1)
+        layout.addWidget(label_vna_average_counts, 4 + addition, 2, 1, 1)
+        layout.addWidget(self.input_vna_averageCounts, 4 + addition, 3, 1, 1)
 
-        layout.addWidget(label_split_1, 1+addition, 4, 1, 1)
-        layout.addWidget(label_split_2, 2+addition, 4, 1, 1)
-        layout.addWidget(label_split_3, 3+addition, 4, 1, 1)
-        layout.addWidget(label_split_4, 4+addition, 4, 1, 1)
-        layout.addWidget(label_split_5, 5+addition, 4, 1, 1)
+        layout.addWidget(label_split_1, 1 + addition, 4, 1, 1)
+        layout.addWidget(label_split_2, 2 + addition, 4, 1, 1)
+        layout.addWidget(label_split_3, 3 + addition, 4, 1, 1)
+        layout.addWidget(label_split_4, 4 + addition, 4, 1, 1)
+        layout.addWidget(label_split_5, 5 + addition, 4, 1, 1)
 
-        layout.addWidget(self.btn_vna_setup, 5+addition, 0, 1, 4)
+        layout.addWidget(self.btn_vna_setup, 5+  addition, 0, 1, 4)
         layout.addWidget(self.btn_vna_normalize, 1 + addition, 5, 2, 1)
         layout.addWidget(self.btn_vna_raw, 1 + addition, 6, 2, 1)
         layout.addWidget(self.input_vna_format, 3 + addition, 5, 1, 1)
         layout.addWidget(self.btn_vna_format, 3 + addition, 6, 1, 1)
-        layout.addWidget(self.input_path_read, 4+addition, 5, 1, 2)
-        layout.addWidget(self.btn_data_save, 5+addition, 5, 1, 1)
+        layout.addWidget(self.input_path_read, 4 + addition, 5, 1, 2)
+        layout.addWidget(self.btn_data_save, 5 + addition, 5, 1, 1)
         layout.addWidget(self.btn_graph_save, 5 + addition, 6, 1, 1)
 
         # 建立Thread，然后直接打开，自动运行其中的run函数以实现实时绘图
@@ -670,14 +667,17 @@ class MyWindow(QWidget):
         # 关闭所有可能存在的连接
         try:
             VnaController.vna.close()
-            print("VNA connection closed.")
         except visa.VisaIOError:
             pass
+        else:   # try没有错误执行打印       
+            print("VNA connection closed.")
+
         try:
             self.ppms.close_client()
-            print("PPMS connection closed.")
         except AttributeError:
             pass
+        else:
+            print("PPMS connection closed.")
 
 
 if __name__ == '__main__':
