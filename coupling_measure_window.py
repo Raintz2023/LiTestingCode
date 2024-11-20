@@ -1,18 +1,16 @@
 import os.path
 import time
-import random
 import sys
 import pyvisa as visa
 import numpy as np
 import pandas as pd
 import MultiPyVu as mpv
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QTimer
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit,
-                             QPushButton, QSizePolicy, QDesktopWidget, QCheckBox)
+                             QPushButton, QDesktopWidget, QCheckBox)
 from auto_meshgrid import DataProcessing as dp
 import pathlib
 from colorama import Fore
@@ -519,14 +517,14 @@ class MyWindow(QWidget):
         layout.addWidget(self.s11_checkbox, 4 + addition, 4, 1, 1)
         layout.addWidget(self.s22_checkbox, 5 + addition, 4, 1, 1)
 
-        layout.addWidget(label_measure, 1+addition, 5, 1, 3)
-        layout.addWidget(label_measure_path, 2+addition, 5, 1, 1)
-        layout.addWidget(self.input_measure_path, 2+addition, 6, 1, 2)
-        layout.addWidget(label_measure_start_field, 3+addition, 5, 1, 1)
+        layout.addWidget(label_measure, 1 + addition, 5, 1, 3)
+        layout.addWidget(label_measure_path, 2 + addition, 5, 1, 1)
+        layout.addWidget(self.input_measure_path, 2 + addition, 6, 1, 2)
+        layout.addWidget(label_measure_start_field, 3 + addition, 5, 1, 1)
         layout.addWidget(self.input_measure_start_field, 4 + addition, 5, 1, 2)
-        layout.addWidget(label_measure_stop_field, 3+addition, 6, 1, 1)
+        layout.addWidget(label_measure_stop_field, 3 + addition, 6, 1, 1)
         layout.addWidget(self.input_measure_stop_field, 4 + addition, 6, 1, 2)
-        layout.addWidget(label_measure_field_step, 3+addition, 7, 1, 1)
+        layout.addWidget(label_measure_field_step, 3 + addition, 7, 1, 1)
         layout.addWidget(self.input_measure_field_step, 4 + addition, 7, 1, 2)
 
         layout.addWidget(self.label_monitor_temp, 0, 6, 1, 2)
@@ -653,3 +651,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MyWindow()
     sys.exit(app.exec_())
+    
