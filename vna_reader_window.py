@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit,
-                             QPushButton, QCheckBox, QDesktopWidget)
+                             QPushButton, QCheckBox, QDesktopWidget, QComboBox, QMessageBox)
 
 
 class VnaController:
@@ -180,6 +180,13 @@ class VnaReadDrawThread(QThread):
 
             x_yi = x_re + 1j * y_im
             freq_rf = rf.Frequency(float(freq[0]), float(freq[-1]), len(freq), 'hz')
+
+            # 检查 x_yi 是否包含零值
+            # zero_indices = np.where(np.abs(x_yi) == 0)[0]
+            # if zero_indices.size > 0:
+                # print("Indices of zero values:", zero_indices)  # 输出为0的序号
+                # time.sleep(2 * zero_indices.size / 1001)
+
             network = rf.Network(frequency=freq_rf, s=x_yi)
             s21 = network.s_db[:, 0, 0] # 获取S21的幅值，传递出去保存
 
@@ -215,7 +222,7 @@ class VnaReadDrawThread(QThread):
             if self.connection_id is None:
                 self.connection_id = self.canvas.mpl_connect('button_press_event', self.onclick) 
 
-            self.ax.set_title(f'{s_parameter}', fontsize='40')
+            self.ax.set_title(f'{s_parameter}-{int(points[0])} points', fontsize='40')
             self.ax.set_xlabel('Frequency (GHz)', fontsize='30')
             self.ax.set_ylabel(f'{s_parameter} (dBm)', fontsize='30')   # 设置X,Y的label
             self.ax.xaxis.set_tick_params(labelsize=20)  
@@ -289,7 +296,14 @@ class VnaDataNormalizeThread(QThread):
         raw_data = np.array(VnaController.vna.query_ascii_values(":CALC:DATA? SDATA"))
         # 获取当前数据，保存用来归一化(省去建立网络需要的频率范围)
         for i in range(0, len(raw_data), 2):
-            log_magnitude = 20 * np.log10(np.sqrt(raw_data[i] ** 2 + raw_data[i + 1] ** 2))
+            magnitude = np.sqrt(raw_data[i] ** 2 + raw_data[i + 1] ** 2)
+            
+            # 检查幅值是否为零，避免对数计算错误
+            if magnitude > 0:
+                log_magnitude = 20 * np.log10(magnitude)
+            else:
+                log_magnitude = -np.inf  # 或者设置为0，具体取决于你的需求
+
             self.data = np.append(self.data, log_magnitude)
 
         self.data_normalize_signal.emit(self.data)
@@ -323,6 +337,8 @@ class MyWindow(QWidget):
 
         width = 180
         height = 45
+
+#########################################定义控件#############################################
 
         # VNA输入控件
         self.input_vna_s_parameter = QLineEdit()
@@ -408,6 +424,12 @@ class MyWindow(QWidget):
         self.ppms_connect_checkbox = QCheckBox('Connect PPMS', self)
         self.fitting_q_checkbox = QCheckBox('Fitting Q', self)
 
+        # 下滑菜单控件
+        self.corr_combo_box = QComboBox(self)
+        self.corr_combo_box.setFixedSize(width_trans(180), height_trans(45))
+
+###########################################字体设置##########################################
+
         # 设置字体
         font1 = QFont()
         font1.setPointSize(9)
@@ -441,8 +463,10 @@ class MyWindow(QWidget):
         self.fitting_q_checkbox.setFont(font1)
         self.btn_data_save.setFont(font1)
         self.btn_graph_save.setFont(font1)
+        self.corr_combo_box.setFont(font1)
 
-        # 设置窗口布局
+#############################################窗口布局########################################
+
         layout = QGridLayout(self)
         layout.setRowStretch(8, 1)
         layout.setColumnStretch(13, 1)
@@ -452,9 +476,9 @@ class MyWindow(QWidget):
         layout.addWidget(self.ppms_connect_checkbox, 0, 6, 1, 1)
         layout.addWidget(self.input_ppms_set_field, 1, 6, 1, 1)
         layout.addWidget(self.btn_ppms_set_field, 2, 6, 1, 1)
-        layout.addWidget(self.fitting_q_checkbox, 4, 6, 1, 1)
-        layout.addWidget(self.input_fitting_q, 5, 6, 1, 1)
-        layout.addWidget(self.btn_fitting_q, 6, 6, 1, 1)
+        layout.addWidget(self.fitting_q_checkbox, 5, 6, 1, 1)
+        layout.addWidget(self.input_fitting_q, 6, 6, 1, 1)
+        layout.addWidget(self.btn_fitting_q, 7, 6, 1, 1)
         layout.addWidget(label_vna, 1 + addition, 0, 1, 2)
         layout.addWidget(label_vna_s, 1 + addition, 2, 1, 1)
         layout.addWidget(self.input_vna_s_parameter, 1 + addition, 3, 1, 1)
@@ -486,6 +510,10 @@ class MyWindow(QWidget):
         layout.addWidget(self.btn_data_save, 5 + addition, 5, 1, 1)
         layout.addWidget(self.btn_graph_save, 5 + addition, 6, 1, 1)
 
+        layout.addWidget(self.corr_combo_box, 3, 6, 1, 1)
+
+###########################################绑定方法##########################################
+
         # 建立Thread，然后直接打开，自动运行其中的run函数以实现实时绘图
         self.vna_draw()
 
@@ -515,10 +543,17 @@ class MyWindow(QWidget):
         self.fitting_q_checkbox.stateChanged.connect(self.q_fitting_on)
         self.btn_fitting_q.clicked.connect(self.q_fitting_parameter)
 
+        # 选择下滑菜单执行操作
+        self.corr_combo_box_func()
+
+##########################################################################################
+
         # 窗口展示
         self.setGeometry(800, 100, 1200, 1200)
         self.setWindowTitle('VNA Reader')
         self.show()
+
+###########################################功能方法##########################################
 
     def vna_draw(self, normalize=0, vna_format="log", q_fitting_signal=0, w_res=0):
         # 最开始自动绘出实时数据,之后调用相当于重启
@@ -658,6 +693,43 @@ class MyWindow(QWidget):
 
         self.vna_draw(q_fitting_signal=self.q_fitting_signal, w_res=self.w_res)
 
+
+    def corr_combo_box_func(self):  # 下滑菜单执行一系列操作
+        options = self.corr_options()
+        self.corr_combo_box.addItems(options)  # 将选项添加到下滑选择控件
+        self.corr_combo_box.currentIndexChanged.connect(self.corr_combo_box_change)  # 连接下滑菜单变化信号
+
+    def corr_combo_box_change(self, index):
+        #暂停绘图
+        self.vna_read_draw_thread.stop_reading()
+        self.vna_read_draw_thread.wait()
+
+        selected_option = self.corr_combo_box.itemText(index)  # 获取当前选中的选项
+
+        if selected_option == "No Corr":
+            try:
+                # 终止校准
+                VnaController.vna.write(":SENSe1:CORRection:CSET:DEACtivate")
+            except:
+                pass
+        else:
+                # 弹出确认对话框，确认校准配置
+                corr_reply = QMessageBox.question(self, '确认', f'将{selected_option}的配置应用到现有通道？', 
+                                     QMessageBox.Yes | QMessageBox.No, 
+                                     QMessageBox.No)
+                if corr_reply == QMessageBox.Yes:
+                    VnaController.vna.write(f":SENSe1:CORRection:CSET:ACTivate {selected_option}, 1")        
+                else:
+                    VnaController.vna.write(f":SENSe1:CORRection:CSET:ACTivate {selected_option}, 0")
+        # 重新绘图
+        self.vna_draw()
+
+    def corr_options(self):
+        # 获取当前所有的校准集
+        correction_names = ["No Corr"] + VnaController.vna.query(":SENSe1:CORRection:CSET:CATalog? NAME").strip()[1:-1].split(',')
+        return correction_names
+    
+
     def closeEvent(self, event):
         print("Window is closing.")
         # 关闭窗口时记得中断VNA读取数据，否者可能会和关闭VNA冲突
@@ -684,3 +756,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MyWindow()
     sys.exit(app.exec_())
+
